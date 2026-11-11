@@ -1,0 +1,240 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brain Blast Quiz</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #080f20;
+  color: white;
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+.app { width: 100%; max-width: 480px; }
+.brand {
+  color: #60a5fa;
+  letter-spacing: 3px;
+  font-size: 13px;
+  font-weight: bold;
+  text-align: center;
+}
+h1 { text-align: center; font-size: 32px; }
+.subtitle { text-align: center; color: #9caac2; }
+.card {
+  background: #141f35;
+  border: 1px solid #293751;
+  border-radius: 22px;
+  padding: 24px;
+  margin-top: 25px;
+}
+[hidden] { display: none !important; }
+.top {
+  display: flex;
+  justify-content: space-between;
+  color: #a9b9d2;
+  font-size: 13px;
+}
+.progress {
+  background: #293751;
+  height: 7px;
+  border-radius: 10px;
+  margin: 18px 0 25px;
+  overflow: hidden;
+}
+#bar {
+  background: #3b82f6;
+  height: 100%;
+  width: 10%;
+  transition: width .3s;
+}
+#question { font-size: 21px; line-height: 1.4; }
+.options {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+}
+.option {
+  width: 100%;
+  padding: 15px;
+  border: 1px solid #34445f;
+  border-radius: 12px;
+  background: #1d2b45;
+  color: white;
+  text-align: left;
+  font-size: 15px;
+  cursor: pointer;
+}
+.option:disabled { cursor: default; opacity: 1; }
+.option.correct { background: #145c43; border-color: #22c58b; }
+.option.wrong { background: #642d3a; border-color: #fb7185; }
+#feedback {
+  min-height: 24px;
+  color: #93c5fd;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.main-btn {
+  width: 100%;
+  padding: 15px;
+  border: 0;
+  border-radius: 12px;
+  background: #3b82f6;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+}
+.main-btn:disabled { opacity: .4; cursor: not-allowed; }
+.result { text-align: center; }
+.big-score { font-size: 48px; color: #60a5fa; font-weight: bold; }
+footer {
+  text-align: center;
+  color: #72819b;
+  margin-top: 24px;
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="brand">✦ BRAIN BLAST ✦</div>
+  <h1>Quiz Challenge</h1>
+  <p class="subtitle">Let's test your knowledge!</p>
+
+  <section class="card" id="quiz">
+    <div class="top">
+      <span id="counter">Question 1 of 10</span>
+      <span id="score">Score: 0</span>
+    </div>
+    <div class="progress"><div id="bar"></div></div>
+    <h2 id="question">Loading...</h2>
+    <div class="options" id="options"></div>
+    <p id="feedback" aria-live="polite"></p>
+    <button class="main-btn" id="next" disabled>Next Question →</button>
+  </section>
+
+  <section class="card result" id="result" hidden>
+    <h2>Quiz Completed! 🎉</h2>
+    <p>Your final score</p>
+    <div class="big-score" id="finalScore">0/10</div>
+    <p id="message"></p>
+    <button class="main-btn" id="restart">Play Again ↻</button>
+  </section>
+
+  <footer>Made with curiosity ❤️</footer>
+</main>
+
+<script>
+const questions = [
+  {q:"What is the capital of Japan?",o:["Seoul","Tokyo","Beijing","Bangkok"],a:1},
+  {q:"Which is the largest planet?",o:["Earth","Mars","Jupiter","Venus"],a:2},
+  {q:"Which planet is called the Red Planet?",o:["Mars","Saturn","Mercury","Neptune"],a:0},
+  {q:"Which is the largest ocean?",o:["Indian","Atlantic","Arctic","Pacific"],a:3},
+  {q:"What is 5 × 6?",o:["25","30","35","40"],a:1},
+  {q:"Which gas do plants absorb?",o:["Oxygen","Nitrogen","Carbon dioxide","Hydrogen"],a:2},
+  {q:"What is the currency of Japan?",o:["Dollar","Yen","Euro","Rupee"],a:1},
+  {q:"What is the chemical formula of water?",o:["CO2","O2","H2O","NaCl"],a:2},
+  {q:"How many days are in a week?",o:["5","6","7","8"],a:2},
+  {q:"How many chambers does a human heart have?",o:["2","3","4","5"],a:2}
+];
+
+let current = 0;
+let points = 0;
+let answered = false;
+
+const quiz = document.getElementById("quiz");
+const result = document.getElementById("result");
+const questionEl = document.getElementById("question");
+const optionsEl = document.getElementById("options");
+const feedback = document.getElementById("feedback");
+const next = document.getElementById("next");
+
+function showQuestion() {
+  const item = questions[current];
+  answered = false;
+
+  document.getElementById("counter").textContent =
+    `Question ${current+1} of ${questions.length}`;
+  document.getElementById("score").textContent = `Score: ${points}`;
+  document.getElementById("bar").style.width =
+    `${(current+1)/questions.length*100}%`;
+
+  questionEl.textContent = item.q;
+  optionsEl.innerHTML = "";
+  feedback.textContent = "";
+  next.disabled = true;
+  next.textContent = current === questions.length-1
+    ? "See My Result →" : "Next Question →";
+
+  item.o.forEach((answer,index) => {
+    const button = document.createElement("button");
+    button.className = "option";
+    button.textContent = answer;
+    button.addEventListener("click", () => chooseAnswer(index,button));
+    optionsEl.appendChild(button);
+  });
+}
+
+function chooseAnswer(index, selected) {
+  if (answered) return;
+  answered = true;
+
+  const correct = questions[current].a;
+  const buttons = optionsEl.querySelectorAll("button");
+
+  buttons.forEach((button,i) => {
+    button.disabled = true;
+    if (i === correct) button.classList.add("correct");
+  });
+
+  if (index === correct) {
+    points++;
+    feedback.textContent = "Correct answer! Amazing! 🎉";
+  } else {
+    selected.classList.add("wrong");
+    feedback.textContent =
+      "Not quite! Correct answer: " + questions[current].o[correct];
+  }
+
+  document.getElementById("score").textContent = `Score: ${points}`;
+  next.disabled = false;
+}
+
+next.addEventListener("click", () => {
+  if (!answered) return;
+
+  if (current < questions.length-1) {
+    current++;
+    showQuestion();
+  } else {
+    quiz.hidden = true;
+    result.hidden = false;
+    document.getElementById("finalScore").textContent =
+      `${points}/${questions.length}`;
+    document.getElementById("message").textContent =
+      points >= 8 ? "Excellent! You are a genius! 🏆" :
+      points >= 5 ? "Good job! Keep learning! ⭐" :
+      "Keep practicing. You can do it! 💪";
+  }
+});
+
+document.getElementById("restart").addEventListener("click", () => {
+  current = 0;
+  points = 0;
+  result.hidden = true;
+  quiz.hidden = false;
+  showQuestion();
+});
+
+showQuestion();
+</script>
+</body>
+</html>
